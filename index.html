@@ -1336,8 +1336,15 @@ const UI = (() => {
         const el = box.querySelector("#f_" + f.key);
         const v = el ? el.value.trim() : "";
         if (f.required && !v) { valid = false; UI.toast("请填写：" + f.label, "err"); el?.focus(); }
-        if (f.type === "number") out[f.key] = parseFloat(v) || 0;
-        else out[f.key] = v;
+        if (f.type === "number") {
+          let n = parseFloat(v);
+          if (isNaN(n)) n = 0;
+          if (f.min !== undefined && n < f.min) { valid = false; UI.toast(f.label + "不能小于 " + f.min, "err"); el?.focus(); }
+          if (f.max !== undefined && n > f.max) { valid = false; UI.toast(f.label + "不能大于 " + f.max, "err"); el?.focus(); }
+          out[f.key] = n;
+        } else {
+          out[f.key] = v;
+        }
       });
       return valid ? out : null;
     }
@@ -1380,6 +1387,17 @@ window.UI = UI;
 "use strict";
 // 全局 DOM 快捷函数（供各页面模块使用）
 function el(id) { return document.getElementById(id); }
+
+// 全局错误捕获：记录内部日志（最多50条），不打断用户、不暴露内部报错
+window.__errLog = [];
+window.addEventListener("error", (e) => {
+  window.__errLog.push({ t: new Date().toLocaleString(), msg: e.message, src: (e.filename || "") + ":" + (e.lineno || ""), stack: ((e.error && e.error.stack) || "").slice(0, 300) });
+  if (window.__errLog.length > 50) window.__errLog.shift();
+});
+window.addEventListener("unhandledrejection", (e) => {
+  window.__errLog.push({ t: new Date().toLocaleString(), msg: "未处理Promise异常: " + String((e.reason && e.reason.message) || e.reason), stack: "" });
+  if (window.__errLog.length > 50) window.__errLog.shift();
+});
 
 const App = (() => {
   let currentPage = "overview";
@@ -2805,7 +2823,7 @@ function renderGroups(body) {
   body.innerHTML = html;
   el("gAuto").onclick = () => UI.form("随机分组", [
     { key: "mode", label: "方式", type: "select", options: [{ v: "num", t: "按组数" }, { v: "size", t: "按每组人数" }] },
-    { key: "value", label: "数值", type: "number", value: 4 },
+    { key: "value", label: "数值", type: "number", value: 4, min: 1 },
   ], d => {
     const n = d.mode === "num" ? Number(d.value) : Math.ceil(cls.students.length / Number(d.value));
     const shuffled = cls.students.slice().sort(() => Math.random() - 0.5);
@@ -2867,7 +2885,7 @@ function renderBadges(body) {
   body.innerHTML = html;
   el("bdAdd").onclick = () => UI.form("勋章定义", [
     { key: "name", label: "勋章名", type: "text", required: true, placeholder: "如：数学小达人" },
-    { key: "threshold", label: "积分门槛", type: "number", value: 50 },
+    { key: "threshold", label: "积分门槛", type: "number", value: 50, min: 0 },
   ], d => {
     (cls.badgeDefs || (cls.badgeDefs = [])).push({ id: S.uid("bd"), ...d });
     S.save(); renderBadges(body);
@@ -3396,8 +3414,8 @@ function exAddModal() {
   UI.form("新建考试", [
     { key: "name", label: "考试名称", type: "text", required: true, placeholder: "如：期中测试" },
     { key: "date", label: "日期", type: "date", value: S.today() },
-    { key: "full", label: "满分", type: "number", value: 100 },
-    { key: "weight", label: "权重(%)", type: "number", value: 30 },
+    { key: "full", label: "满分", type: "number", value: 100, min: 1 },
+    { key: "weight", label: "权重(%)", type: "number", value: 30, min: 0, max: 100 },
     { key: "knowledges", label: "知识点（逗号分隔）", type: "text", hint: "可选。填了之后自动算各知识点掌握率，讲评课照着讲。如：20以内加减法，认识图形" },
   ], d => {
     const ex = {
@@ -3963,7 +3981,7 @@ function fundModal(type) {
   const S = Store;
   UI.form(type === "in" ? "记录收入" : "记录支出", [
     { key: "date", label: "日期", type: "date", value: S.today() },
-    { key: "amount", label: "金额", type: "number", required: true },
+    { key: "amount", label: "金额", type: "number", required: true, min: 0.01 },
     { key: "note", label: "备注", type: "text", required: true, placeholder: "如：班费收取 / 购买图书" },
   ], d => { S.state.funds.push({ id: S.uid("f"), date: d.date, type, amount: d.amount, note: d.note }); S.save(); renderFunds(el("avBody")); });
 }
@@ -4048,6 +4066,9 @@ function renderWorkload(body) {
 /* ---- 番茄钟 ---- */
 const POMO = { running: false, left: 25 * 60, total: 25 * 60, timer: null };
 function renderPomodoro(body) {
+  // 重新进入番茄钟视图时清理旧计时器，防止重复计时泄漏
+  clearInterval(POMO.timer);
+  POMO.running = false;
   body.innerHTML = `
     <div style="max-width:420px;margin:20px auto;text-align:center">
       <div class="pomo-display ${POMO.running ? "running" : ""}" id="pomoNum">25:00</div>
@@ -4239,6 +4260,10 @@ const ClassMode = (() => {
   }
   function switchTool(t) {
     tool = t;
+    // 切换工具时清理旧定时器，防止计时器/滚动点名残留泄漏
+    clearInterval(timer);
+    clearInterval(CM.spin);
+    if (TMR.running) TMR.running = false;
     document.querySelectorAll(".cm-tool").forEach(b => b.classList.toggle("active", b.dataset.cm === t));
     renderTool();
   }
