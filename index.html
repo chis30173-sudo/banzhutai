@@ -1073,6 +1073,8 @@ const Demo = (() => {
   function build() {
     const clsId = "cls_demo1";
     const students = makeStudents(18);
+    const seatArr = new Array(24).fill("");
+    students.forEach((s, i) => seatArr[i] = s.id);
     const start = Store.addDays(nextMonday(), -14); // 第3周的周一
     const today = Store.today();
 
@@ -1188,7 +1190,7 @@ const Demo = (() => {
       },
       classes: [{
         id: clsId, name: "一年级2班", color: "#2563eb",
-        students, groups: [], seats: {}, 
+        students, groups: [], seats: { normal: seatArr }, 
         badgeDefs: [
           { id: "bd1", name: "数学小达人", threshold: 50 },
           { id: "bd2", name: "进步之星", threshold: 20 },
@@ -2125,6 +2127,7 @@ function renderWeekView(body) {
 }
 
 function addCourseModal(pre) {
+  pre = pre || {};
   const S = Store;
   const cls = S.curClass();
   const periods = S.state.settings.schedule;
@@ -2137,14 +2140,13 @@ function addCourseModal(pre) {
     { key: "biweekly", label: "单双周", type: "select", value: pre.biweekly || "", options: [{ v: "", t: "每周都上" }, { v: "A", t: "单周上" }, { v: "B", t: "双周上" }] },
     { key: "planId", label: "挂教案", type: "select", value: pre.planId || "", options: [{ v: "", t: "不挂" }].concat(plans.map(p => ({ v: p.id, t: p.title }))) },
   ], d => {
-    const odd = S.isOddWeek(S.addDays(S.today(), -(S.weekday(S.today()) - 1)));
-    if (pre) {
+    if (pre && pre.id) {
       Object.assign(pre, d);
     } else {
       S.state.timetable.courses.push(Object.assign({ id: S.uid("tt"), clsId: cls?.id, off: false }, d));
     }
     S.save(); renderTimetable(); App.updateBadges();
-    UI.toast(pre ? "课程已更新" : "课程已添加");
+    UI.toast(pre && pre.id ? "课程已更新" : "课程已添加");
   });
 }
 
@@ -4271,7 +4273,6 @@ const ClassMode = (() => {
       <div class="cm-labels" id="pickLabels" style="display:none"></div>`;
     el("pickStart").onclick = spinPick;
     el("pickReset").onclick = () => { PICK.pool = activeStudents(); PICK.done = []; renderPick(b); };
-    renderPickResult(b);
     window._cmKey = (e) => {
       if (e.code === "Space") { e.preventDefault(); spinPick(); }
       else if (e.key >= "1" && e.key <= "7") switchTool({ 1: "pick", 2: "draw", 3: "group", 4: "timer", 5: "comment", 6: "vote", 7: "seat" }[e.key]);
