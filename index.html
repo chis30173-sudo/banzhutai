@@ -1474,7 +1474,7 @@ const App = (() => {
 
   function bindUI() {
     el("btnPrivacy").onclick = () => { Store.state.settings.privacy = !Store.state.settings.privacy; Store.save(); renderTopbar(); refreshAll(); UI.toast(Store.state.settings.privacy ? "已隐藏学生姓名（投屏安全）" : "已恢复学生姓名"); };
-    el("btnTheme").onclick = toggleTheme;
+    el("btnTheme").onclick = () => toggleTheme();
     el("btnClassMode").onclick = () => ClassMode.open();
     el("storageInfo").textContent = "";
   }
@@ -1576,6 +1576,7 @@ document.addEventListener("DOMContentLoaded", () => App.init());
 <script>
 /* ============ 页面：总览 / 设置 / 帮助 ============ */
 "use strict";
+(function() {
 
 /* ================= 总览 ================= */
 Pages.overview = {
@@ -2031,11 +2032,13 @@ function renderHelpSection(id) {
   const s = HELP_SECTIONS.find(x => x.id === id);
   if (s) el("helpBody").innerHTML = `<div class="help-sec"><h3>${s.title}</h3>${s.content}</div>`;
 }
+})();
 
 </script>
 <script>
 /* ============ 页面：课表 / 备课 ============ */
 "use strict";
+(function() {
 
 /* ================= 课表 ================= */
 const TT = { view: "week", curWeek: 0, curDate: Store.today() };
@@ -2057,7 +2060,7 @@ function bindToolbar() {
     ["ttHoliday", () => holidayModal()],
     ["ttPrint", () => printTimetable()],
   ];
-  btns.forEach(([id, fn]) => { const b = el(id); if (b) b.onclick = fn; });
+  btns.forEach(([id, fn]) => { const b = el(id); if (b) b.onclick = () => fn(); });
   document.querySelectorAll("[data-tt-view]").forEach(b => b.onclick = () => {
     TT.view = b.dataset.ttView; renderTimetable();
   });
@@ -2213,7 +2216,7 @@ function renderPlanView(body) {
   const plans = S.state.lessonPlans;
   if (!plans.length) {
     body.innerHTML = `<div class="empty"><div class="big">📋</div>还没有课时计划<br><button class="btn primary" id="planAdd0" style="margin-top:10px">＋ 新建课时计划</button></div>`;
-    el("planAdd0").onclick = planModal;
+    el("planAdd0").onclick = () => planModal();
     return;
   }
   let html = plans.map(p => {
@@ -2232,7 +2235,7 @@ function renderPlanView(body) {
       </div></div>`;
   }).join("");
   body.innerHTML = html + `<button class="btn primary" id="planAdd" style="margin-top:4px">＋ 新建课时计划</button>`;
-  el("planAdd").onclick = planModal;
+  el("planAdd").onclick = () => planModal();
   body.querySelectorAll("[data-pa]").forEach(b => b.onclick = () => {
     const p = plans.find(x => x.id === b.dataset.pa);
     UI.form("添加课时", [{ key: "title", label: "课时内容", type: "text", required: true, placeholder: "如：第6课时 认识图形" }], d => {
@@ -2538,8 +2541,8 @@ function bindCV() {
     document.querySelectorAll("[data-cv]").forEach(x => x.classList.toggle("active", x === b));
     renderCV();
   });
-  el("cvImport").onclick = importRosterModal;
-  el("cvExport").onclick = exportRoster;
+  el("cvImport").onclick = () => importRosterModal();
+  el("cvExport").onclick = () => exportRoster();
 }
 function renderCV() {
   const body = el("cvBody");
@@ -2572,7 +2575,7 @@ function renderRoster(body) {
   if (!cls.students.length) html += `<div class="empty"><div class="big">📋</div>还没有学生<br><button class="btn primary sm" id="stuAdd0" style="margin-top:10px">添加学生</button></div>`;
   body.innerHTML = html;
   const addBtn = el("stuAdd") || el("stuAdd0");
-  if (addBtn) addBtn.onclick = addStudentModal;
+  if (addBtn) addBtn.onclick = () => addStudentModal();
   body.querySelectorAll(".roster-card").forEach(c => c.onclick = () => openStudentProfile(c.dataset.sid));
 }
 
@@ -2926,11 +2929,13 @@ function rubricModal(r) {
     S.save(); renderRubrics(el("cvBody"));
   }, "保存", { wide: true });
 }
+})();
 
 </script>
 <script>
 /* ============ 页面：考勤 / 作业 / 成绩 ============ */
 "use strict";
+(function() {
 
 /* ================= 考勤 ================= */
 Pages.attendance = {
@@ -2944,8 +2949,8 @@ Pages.attendance = {
 };
 function bindAtt() {
   el("attDate").onchange = () => renderAtt();
-  el("attExport").onclick = exportAtt;
-  el("attLeave").onclick = leaveModal;
+  el("attExport").onclick = () => exportAtt();
+  el("attLeave").onclick = () => leaveModal();
 }
 function renderAtt() {
   const S = Store, cls = S.curClass();
@@ -3045,10 +3050,10 @@ Pages.homework = {
   },
 };
 function bindHW() {
-  el("hwAdd").onclick = hwAddModal;
-  el("hwCopyAbsent").onclick = copyAbsentList;
-  el("hwGrade").onclick = gradeModal;
-  el("hwWrong").onclick = wrongModal;
+  el("hwAdd").onclick = () => hwAddModal();
+  el("hwCopyAbsent").onclick = () => copyAbsentList();
+  el("hwGrade").onclick = () => gradeModal();
+  el("hwWrong").onclick = () => wrongModal();
   el("hwSelect").onchange = () => renderHW();
 }
 function hwList() {
@@ -3232,9 +3237,9 @@ Pages.score = {
   },
 };
 function bindEX() {
-  el("exAdd").onclick = exAddModal;
-  el("exImport").onclick = importScores;
-  el("exExport").onclick = exportScores;
+  el("exAdd").onclick = () => exAddModal();
+  el("exImport").onclick = () => importScores();
+  el("exExport").onclick = () => exportScores();
   el("exPrint").onclick = () => { document.title = "成绩单"; window.print(); };
   el("exSelect").onchange = () => renderEX();
   el("exCompare").onchange = () => renderEX();
@@ -3430,11 +3435,13 @@ function exportScores() {
   cls.students.forEach(s => rows.push([s.no || "", s.name, ex?.scores?.[s.id]?.total ?? ""]));
   UI.exportCSV(`${cls.name}${ex ? ex.name : "成绩"}.csv`, rows);
 }
+})();
 
 </script>
 <script>
 /* ============ 页面：家校 ============ */
 "use strict";
+(function() {
 const HV = { view: "contacts" };
 Pages.home = {
   render() {
@@ -3740,11 +3747,13 @@ function renderMeeting(body) {
     document.body.removeChild(ph);
   };
 }
+})();
 
 </script>
 <script>
 /* ============ 页面：事务 ============ */
 "use strict";
+(function() {
 const AV = { view: "todo" };
 Pages.affairs = {
   render() {
@@ -3802,7 +3811,7 @@ function renderTodos(body) {
     S.state.todos.push({ id: S.uid("td"), text, due: "", done: false, repeat: "", createdAt: S.today() });
     S.save(); input.value = ""; renderTodos(body); App.updateBadges();
   }
-  el("todoAdd").onclick = addTodo;
+  el("todoAdd").onclick = () => addTodo();
   input.onkeydown = e => { if (e.key === "Enter") addTodo(); };
   el("todoClear").onclick = () => {
     const doneCount = list.filter(t => t.done).length;
@@ -4090,7 +4099,7 @@ Pages.archive = {
   },
 };
 function bindAR() {
-  el("arAdd").onclick = arModal;
+  el("arAdd").onclick = () => arModal();
   el("arExport").onclick = () => {
     const rows = [["类型", "日期", "名称", "级别", "学时", "备注", "证书位置"]];
     filterArchives().forEach(a => rows.push([a.type, a.date, a.name, a.level || "", a.hours || "", a.note || "", a.folder || ""]));
@@ -4194,6 +4203,7 @@ function renderLinks(body) {
     S.save(); renderLinks(body);
   });
 }
+})();
 
 </script>
 <script>
@@ -4271,7 +4281,7 @@ const ClassMode = (() => {
         <button class="cm-btn ghost" id="pickReset">重置本轮</button>
       </div>
       <div class="cm-labels" id="pickLabels" style="display:none"></div>`;
-    el("pickStart").onclick = spinPick;
+    el("pickStart").onclick = () => spinPick();
     el("pickReset").onclick = () => { PICK.pool = activeStudents(); PICK.done = []; renderPick(b); };
     window._cmKey = (e) => {
       if (e.code === "Space") { e.preventDefault(); spinPick(); }
@@ -4406,7 +4416,7 @@ const ClassMode = (() => {
       </div>`;
     const num = el("tmrNum");
     num.textContent = fmt(TMR.left);
-    el("tmrGo").onclick = toggleTmr;
+    el("tmrGo").onclick = () => toggleTmr();
     el("tmrReset").onclick = () => { clearInterval(timer); TMR.running = false; TMR.left = TMR.total; num.textContent = fmt(TMR.left); num.classList.remove("warn10"); el("tmrGo").textContent = "⏱ 开始（空格）"; };
     b.querySelectorAll("[data-s]").forEach(btn => btn.onclick = () => {
       clearInterval(timer); TMR.running = false;
